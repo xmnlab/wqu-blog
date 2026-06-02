@@ -1,6 +1,7 @@
 ---
 title: "MongoDB Host Access from Jupyter"
 description: "How to find the correct MongoDB host address and fix localhost connection errors in course notebooks."
+author: Ivan Ogasawara
 date: 2026-06-02
 image: images/wqu-jupyter-menu.png
 categories:
@@ -25,11 +26,13 @@ In the platform, click the **Jupyter** button.
 
 This opens a pop-up with the Jupyter and MongoDB connection details. Copy the MongoDB IP address shown there.
 
-In your notebook, store that address in a variable:
+In your notebook, store that address in a variable. For example, an IP address usually looks like four numbers separated by dots:
 
 ```python
-host = "your-mongodb-ip-address"
+host = "192.168.1.25"
 ```
+
+Use the actual MongoDB IP address from your platform pop-up, not the example above. If you want more background on what IP addresses are, see the [Wikipedia page about IP addresses](https://en.wikipedia.org/wiki/IP_address).
 
 Then use the `host` variable when you create the MongoDB client:
 

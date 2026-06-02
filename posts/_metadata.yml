@@ -2,4 +2,8 @@ author: "WQU"
 format:
   html:
     toc: true
+  typst:
+    margin:
+      x: 2.0cm
+      y: 1.5cm
 comments: false

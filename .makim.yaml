@@ -41,6 +41,7 @@ groups:
 
             mkdir -p "$render_dir"
             cp -R "$post_dir/." "$render_dir/"
+            cp posts/_metadata.yml "$render_dir/_metadata.yml"
 
             (
               cd "$render_dir"
