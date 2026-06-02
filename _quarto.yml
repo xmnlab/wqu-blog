@@ -1,0 +1,31 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "WQU Blog"
+  site-url: "https://example.com"
+  description: "Student-focused notes, FAQs, and extra explanations for WQU course content."
+  page-footer:
+    left: "WQU Blog"
+    right: "Course insights, common blockers, and practical explanations."
+  navbar:
+    background: white
+    foreground: "#17202a"
+    pinned: true
+    right:
+      - text: "Posts"
+        href: index.qmd
+      - icon: rss
+        href: index.xml
+
+format:
+  html:
+    theme: litera
+    css: styles.css
+    toc: true
+    code-copy: true
+    smooth-scroll: true
+
+execute:
+  freeze: auto

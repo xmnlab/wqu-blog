@@ -1,0 +1,9 @@
+_site/
+.quarto/
+.quarto-tmp/
+.quarto-cache/
+.quarto-pdf-work/
+.quarto-pdf-test/
+
+/.quarto/
+**/*.quarto_ipynb

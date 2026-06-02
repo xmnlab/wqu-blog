@@ -1,0 +1,52 @@
+groups:
+  pages:
+    help: Build and preview the Quarto blog.
+    tasks:
+      setup:
+        help: Prepare writable Quarto runtime directories.
+        run: mkdir -p .quarto-tmp .quarto-cache
+
+      build:
+        help: Render the Quarto site into _site/.
+        hooks:
+          pre-run:
+            - task: pages.setup
+        run: env TMPDIR=$PWD/.quarto-tmp XDG_CACHE_HOME=$PWD/.quarto-cache quarto render
+
+      preview:
+        help: Start the Quarto preview server.
+        hooks:
+          pre-run:
+            - task: pages.setup
+        run: env TMPDIR=$PWD/.quarto-tmp XDG_CACHE_HOME=$PWD/.quarto-cache quarto preview
+
+      pdf:
+        help: Generate one Typst PDF for each post.
+        backend: bash
+        hooks:
+          pre-run:
+            - task: pages.setup
+        run: |
+          set -euo pipefail
+
+          root="$PWD"
+          workdir="$root/.quarto-pdf-work"
+          rm -rf "$workdir"
+          mkdir -p "$workdir"
+
+          for post in posts/*/index.qmd; do
+            post_dir="$(dirname "$post")"
+            post_name="$(basename "$post_dir")"
+            render_dir="$workdir/$post_name"
+
+            mkdir -p "$render_dir"
+            cp -R "$post_dir/." "$render_dir/"
+
+            (
+              cd "$render_dir"
+              env TMPDIR="$root/.quarto-tmp" XDG_CACHE_HOME="$root/.quarto-cache" \
+                quarto render index.qmd --to typst --output "$post_name.pdf"
+            )
+
+            cp "$render_dir/$post_name.pdf" "$post_dir/$post_name.pdf"
+          done

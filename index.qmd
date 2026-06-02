@@ -1,0 +1,42 @@
+---
+title: "WQU Blog"
+listing:
+  contents: posts
+  sort: "date desc"
+  type: grid
+  grid-columns: 1
+  categories: false
+  feed: true
+  image-height: 210px
+  fields:
+    - image
+    - title
+    - description
+    - date
+    - categories
+page-layout: full
+---
+
+::: {.blog-hero}
+::: {.hero-copy}
+::: {.eyebrow}
+WQU Insights
+:::
+
+# Talent is global. Insight should travel.
+
+Practical notes for WQU students: common issues, frequent questions, extra explanations, and guidance for getting unstuck in quantitative, data science, and AI coursework.
+:::
+
+::: {.hero-media}
+![](assets/wqu-blog-cover.png){.hero-image fig-alt="A modern desk with analytics, notebooks, and a global map detail."}
+:::
+:::
+
+::: {.section-intro}
+::: {.eyebrow}
+Latest Posts
+:::
+
+## Course insights, FAQs, and explanations for common student blockers.
+:::

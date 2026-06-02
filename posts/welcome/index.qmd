@@ -1,0 +1,24 @@
+---
+title: "Welcome to WQU Insights"
+description: "What this blog will cover: common course issues, frequent questions, and extra explanations for students."
+date: 2026-06-02
+image: ../../assets/wqu-blog-cover.png
+categories:
+  - student-support
+  - faq
+---
+
+This blog is a place for short, practical notes that help WQU students move through course content with more confidence.
+
+The goal is to collect the patterns that come up often: concepts that need another explanation, common errors in assignments, frequent questions from learners, and points where students tend to get blocked.
+
+Future posts can cover:
+
+- Clarifications for difficult course topics.
+- Common mistakes and how to reason through them.
+- Frequently asked questions from students.
+- Extra examples that connect theory to implementation.
+- Debugging notes for notebooks, code, data, and tooling.
+- Study guidance for assignments, projects, and assessments.
+
+Each post should be focused, concrete, and written to help students understand the next step rather than simply giving them an answer.

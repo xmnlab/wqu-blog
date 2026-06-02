@@ -1,0 +1,12 @@
+name: wqu-blog
+channels:
+  - nodefaults
+  - conda-forge
+dependencies:
+  - nodejs
+  - pip
+  - python
+  - pip:
+    - quarto-cli
+    - makim
+    - click
