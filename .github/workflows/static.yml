@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Conda environment
         uses: conda-incubator/setup-miniconda@v3
@@ -53,14 +55,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if git ls-remote --exit-code --heads origin gh-pages > /dev/null 2>&1; then
-            git fetch origin gh-pages
-            git checkout -B gh-pages origin/gh-pages
+          if git fetch --no-tags --depth=1 origin gh-pages:refs/remotes/origin/gh-pages; then
+            git checkout -B gh-pages refs/remotes/origin/gh-pages
           else
             git checkout --orphan gh-pages
           fi
 
           git rm -r --ignore-unmatch .
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           cp -a "$deploy_dir"/. .
           touch .nojekyll
 
@@ -69,5 +71,5 @@ jobs:
             echo "No site changes to publish."
           else
             git commit -m "Deploy site"
-            git push origin gh-pages
+            git push origin gh-pages:gh-pages
           fi
