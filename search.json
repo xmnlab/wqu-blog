@@ -1,0 +1,142 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "WQU Blog",
+    "section": "",
+    "text": "WQU Insights\n\n\n\nPractical notes for WQU students: common issues, frequent questions, extra explanations, and guidance for getting unstuck in quantitative, data science, and AI coursework."
+  },
+  {
+    "objectID": "index.html#course-insights-faqs-and-explanations-for-common-student-blockers.",
+    "href": "index.html#course-insights-faqs-and-explanations-for-common-student-blockers.",
+    "title": "WQU Blog",
+    "section": "Course insights, FAQs, and explanations for common student blockers.",
+    "text": "Course insights, FAQs, and explanations for common student blockers."
+  },
+  {
+    "objectID": "posts/mocking-python/index.html",
+    "href": "posts/mocking-python/index.html",
+    "title": "Mocking in Python",
+    "section": "",
+    "text": "A mock is a controlled replacement for something your code normally uses.\nIn Python, we often use mocks in tests. Instead of letting the code talk to a real database, call a real web API, send a real email, or read a real file, we replace that dependency with a small object or function that behaves in a predictable way.\nMocks are useful because they let us test one piece of code at a time. The goal is not to test the internet, a third-party API, or a database server. The goal is to check whether our own function behaves correctly when it receives a certain response."
+  },
+  {
+    "objectID": "posts/mocking-python/index.html#when-to-use-a-mock",
+    "href": "posts/mocking-python/index.html#when-to-use-a-mock",
+    "title": "Mocking in Python",
+    "section": "When to Use a Mock",
+    "text": "When to Use a Mock\nUse a mock when the real dependency is:\n\nSlow, such as a network request.\nUnstable, such as an external API that may be temporarily unavailable.\nExpensive, such as a paid service.\nDangerous, such as code that sends emails, writes files, or changes production data.\nHard to reproduce, such as an API error or timeout.\n\nMocks are especially helpful when a test should always produce the same result. If a test depends on a live website, it may pass today and fail tomorrow even when your code did not change."
+  },
+  {
+    "objectID": "posts/mocking-python/index.html#when-not-to-use-a-mock",
+    "href": "posts/mocking-python/index.html#when-not-to-use-a-mock",
+    "title": "Mocking in Python",
+    "section": "When Not to Use a Mock",
+    "text": "When Not to Use a Mock\nDo not mock everything. If a function is simple and does not depend on an external system, it is usually better to test it directly.\nFor example, a function that calculates a total price does not need a mock:\ndef total_price(price, quantity):\n    return price * quantity\nMocks are most useful at the boundary between your code and something outside your code."
+  },
+  {
+    "objectID": "posts/mocking-python/index.html#example-a-function-that-calls-an-api",
+    "href": "posts/mocking-python/index.html#example-a-function-that-calls-an-api",
+    "title": "Mocking in Python",
+    "section": "Example: A Function That Calls an API",
+    "text": "Example: A Function That Calls an API\nImagine we have this function. It calls an API with requests.get, reads the JSON response, and returns the user’s name:\nimport requests\n\n\ndef get_user_name(user_id):\n    url = f\"https://api.example.com/users/{user_id}\"\n    response = requests.get(url, timeout=5)\n    response.raise_for_status()\n    data = response.json()\n    return data[\"name\"]\nTesting this function against the real API would make the test depend on the network. The API might be down, the user might not exist anymore, or the response might change.\nInstead, we can replace requests.get with our own function during the test."
+  },
+  {
+    "objectID": "posts/mocking-python/index.html#creating-a-mock-response",
+    "href": "posts/mocking-python/index.html#creating-a-mock-response",
+    "title": "Mocking in Python",
+    "section": "Creating a Mock Response",
+    "text": "Creating a Mock Response\nThe real requests.get returns a response object. Our function only needs two methods from that object:\n\nraise_for_status()\njson()\n\nSo our mock response only needs to implement those two methods:\nclass MockResponse:\n    def __init__(self, json_data, status_code=200):\n        self.json_data = json_data\n        self.status_code = status_code\n\n    def json(self):\n        return self.json_data\n\n    def raise_for_status(self):\n        if self.status_code &gt;= 400:\n            raise Exception(f\"HTTP error: {self.status_code}\")\nNow we can create a mock version of requests.get:\ndef mock_requests_get(url, timeout=None):\n    return MockResponse({\"id\": 1, \"name\": \"Ada Lovelace\"})\nThis function accepts url and timeout because the original code calls requests.get(url, timeout=5). A mock should accept the arguments that the real function receives."
+  },
+  {
+    "objectID": "posts/mocking-python/index.html#activating-and-deactivating-the-mock",
+    "href": "posts/mocking-python/index.html#activating-and-deactivating-the-mock",
+    "title": "Mocking in Python",
+    "section": "Activating and Deactivating the Mock",
+    "text": "Activating and Deactivating the Mock\nOne simple way to activate a mock is to temporarily replace requests.get.\nimport requests\n\n\noriginal_requests_get = requests.get\n\n\ndef activate_requests_get_mock():\n    requests.get = mock_requests_get\n\n\ndef deactivate_requests_get_mock():\n    requests.get = original_requests_get\nAfter activate_requests_get_mock() runs, any code that calls requests.get will call mock_requests_get instead.\nAfter deactivate_requests_get_mock() runs, requests.get is restored to its original behavior."
+  },
+  {
+    "objectID": "posts/mocking-python/index.html#using-the-mock-in-a-test",
+    "href": "posts/mocking-python/index.html#using-the-mock-in-a-test",
+    "title": "Mocking in Python",
+    "section": "Using the Mock in a Test",
+    "text": "Using the Mock in a Test\nHere is the full example:\nimport requests\n\n\ndef get_user_name(user_id):\n    url = f\"https://api.example.com/users/{user_id}\"\n    response = requests.get(url, timeout=5)\n    response.raise_for_status()\n    data = response.json()\n    return data[\"name\"]\n\n\nclass MockResponse:\n    def __init__(self, json_data, status_code=200):\n        self.json_data = json_data\n        self.status_code = status_code\n\n    def json(self):\n        return self.json_data\n\n    def raise_for_status(self):\n        if self.status_code &gt;= 400:\n            raise Exception(f\"HTTP error: {self.status_code}\")\n\n\ndef mock_requests_get(url, timeout=None):\n    return MockResponse({\"id\": 1, \"name\": \"Ada Lovelace\"})\n\n\noriginal_requests_get = requests.get\n\n\ndef activate_requests_get_mock():\n    requests.get = mock_requests_get\n\n\ndef deactivate_requests_get_mock():\n    requests.get = original_requests_get\n\n\ndef test_get_user_name():\n    activate_requests_get_mock()\n\n    try:\n        result = get_user_name(1)\n        assert result == \"Ada Lovelace\"\n    finally:\n        deactivate_requests_get_mock()\nThe try and finally block is important. It makes sure the mock is deactivated even if the test fails.\nWithout finally, a failed test could leave requests.get mocked. That can cause confusing failures in other tests."
+  },
+  {
+    "objectID": "posts/mocking-python/index.html#checking-the-request",
+    "href": "posts/mocking-python/index.html#checking-the-request",
+    "title": "Mocking in Python",
+    "section": "Checking the Request",
+    "text": "Checking the Request\nSometimes we also want to check whether our function called the correct URL. We can store the URL inside a list:\ncalls = []\n\n\ndef mock_requests_get(url, timeout=None):\n    calls.append({\"url\": url, \"timeout\": timeout})\n    return MockResponse({\"id\": 1, \"name\": \"Ada Lovelace\"})\nThen the test can check both the result and the request:\ndef test_get_user_name():\n    activate_requests_get_mock()\n\n    try:\n        result = get_user_name(1)\n\n        assert result == \"Ada Lovelace\"\n        assert calls[0][\"url\"] == \"https://api.example.com/users/1\"\n        assert calls[0][\"timeout\"] == 5\n    finally:\n        deactivate_requests_get_mock()\nThis is one of the main benefits of mocks: we can test what our code returns and how it interacts with its dependencies."
+  },
+  {
+    "objectID": "posts/mocking-python/index.html#a-safer-pattern",
+    "href": "posts/mocking-python/index.html#a-safer-pattern",
+    "title": "Mocking in Python",
+    "section": "A Safer Pattern",
+    "text": "A Safer Pattern\nManually replacing requests.get is useful for learning how mocks work. In larger projects, Python’s unittest.mock module is usually safer because it automatically restores the original function.\nThe same test can be written like this:\nfrom unittest.mock import patch\n\n\ndef test_get_user_name():\n    with patch(\"requests.get\", mock_requests_get):\n        result = get_user_name(1)\n\n    assert result == \"Ada Lovelace\"\nThe with block activates the mock. When the block ends, Python deactivates the mock automatically."
+  },
+  {
+    "objectID": "posts/mocking-python/index.html#key-idea",
+    "href": "posts/mocking-python/index.html#key-idea",
+    "title": "Mocking in Python",
+    "section": "Key Idea",
+    "text": "Key Idea\nA mock is a replacement that gives your test control.\nFor requests.get, a mock lets us test code that depends on an HTTP response without making a real HTTP request. The test becomes faster, more stable, and easier to understand."
+  },
+  {
+    "objectID": "posts/welcome/index.html",
+    "href": "posts/welcome/index.html",
+    "title": "Welcome to WQU Insights",
+    "section": "",
+    "text": "This blog is a place for short, practical notes that help WQU students move through course content with more confidence.\nThe goal is to collect the patterns that come up often: concepts that need another explanation, common errors in assignments, frequent questions from learners, and points where students tend to get blocked.\nFuture posts can cover:\n\nClarifications for difficult course topics.\nCommon mistakes and how to reason through them.\nFrequently asked questions from students.\nExtra examples that connect theory to implementation.\nDebugging notes for notebooks, code, data, and tooling.\nStudy guidance for assignments, projects, and assessments.\n\nEach post should be focused, concrete, and written to help students understand the next step rather than simply giving them an answer."
+  },
+  {
+    "objectID": "posts/mongodb-host-access/index.html",
+    "href": "posts/mongodb-host-access/index.html",
+    "title": "MongoDB Host Access from Jupyter",
+    "section": "",
+    "text": "Some students have had trouble connecting to their MongoDB instance from a notebook after moving to the current platform. The most common reason is that the new platform uses a different network configuration than the previous one."
+  },
+  {
+    "objectID": "posts/mongodb-host-access/index.html#find-the-mongodb-host",
+    "href": "posts/mongodb-host-access/index.html#find-the-mongodb-host",
+    "title": "MongoDB Host Access from Jupyter",
+    "section": "Find the MongoDB Host",
+    "text": "Find the MongoDB Host\nIn the platform, click the Jupyter button.\n\nThis opens a pop-up with the Jupyter and MongoDB connection details. Copy the MongoDB IP address shown there.\nIn your notebook, store that address in a variable. For example, an IP address usually looks like four numbers separated by dots:\nhost = \"192.168.1.25\"\nUse the actual MongoDB IP address from your platform pop-up, not the example above. If you want more background on what IP addresses are, see the Wikipedia page about IP addresses.\nThen use the host variable when you create the MongoDB client:\nfrom pymongo import MongoClient\n\nclient = MongoClient(host=host, port=27017)\nUsing a variable makes the notebook easier to update. If the IP address changes later, you only need to update the host value in one place."
+  },
+  {
+    "objectID": "posts/mongodb-host-access/index.html#common-error-connecting-to-localhost",
+    "href": "posts/mongodb-host-access/index.html#common-error-connecting-to-localhost",
+    "title": "MongoDB Host Access from Jupyter",
+    "section": "Common Error: Connecting to Localhost",
+    "text": "Common Error: Connecting to Localhost\nIf you see an error like this, your code is trying to connect to localhost:\nServerSelectionTimeoutError: localhost:27017: [Errno 111] Connection refused\nThe important part is localhost:27017. That means the notebook is looking for MongoDB on the notebook machine itself, not on the MongoDB host provided by the platform.\nThis usually happens when the code still looks like this:\nclient = MongoClient(host=\"localhost\", port=27017)\nChange it to:\nclient = MongoClient(host=host, port=27017)"
+  },
+  {
+    "objectID": "posts/mongodb-host-access/index.html#why-hosthost-is-correct",
+    "href": "posts/mongodb-host-access/index.html#why-hosthost-is-correct",
+    "title": "MongoDB Host Access from Jupyter",
+    "section": "Why host=host Is Correct",
+    "text": "Why host=host Is Correct\nThe expression host=host can look confusing at first because the same word appears twice.\nIn this line:\nclient = MongoClient(host=host, port=27017)\nThe first host is the parameter name expected by MongoClient.\nThe second host is the variable you created earlier:\nhost = \"your-mongodb-ip-address\"\nSo host=host means: pass the value stored in the host variable to the host parameter."
+  },
+  {
+    "objectID": "posts/mongodb-host-access/index.html#another-common-mistake-using-host-as-text",
+    "href": "posts/mongodb-host-access/index.html#another-common-mistake-using-host-as-text",
+    "title": "MongoDB Host Access from Jupyter",
+    "section": "Another Common Mistake: Using \"host\" as Text",
+    "text": "Another Common Mistake: Using \"host\" as Text\nIf your error message mentions something like host:27017, check whether your code uses quotation marks around host:\nclient = MongoClient(host=\"host\", port=27017)\nThat is different from host=host.\n\"host\" is just the literal text host. Python will not replace it with your variable value.\nUse this instead:\nclient = MongoClient(host=host, port=27017)"
+  },
+  {
+    "objectID": "posts/mongodb-host-access/index.html#how-to-read-the-error-message",
+    "href": "posts/mongodb-host-access/index.html#how-to-read-the-error-message",
+    "title": "MongoDB Host Access from Jupyter",
+    "section": "How to Read the Error Message",
+    "text": "How to Read the Error Message\nError messages usually include useful clues. For MongoDB connection issues, look for the host and port in the message:\n\nlocalhost:27017 usually means the code is still using localhost.\nhost:27017 usually means the code is using the string \"host\" instead of the variable host.\nA platform IP followed by :27017 means the code is at least trying the intended host, so the next thing to check is whether the copied IP address is correct.\n\nThe error type is also useful. ServerSelectionTimeoutError means the client could not reach a MongoDB server before the timeout. In this case, the cause is often the wrong host address."
+  },
+  {
+    "objectID": "posts/mongodb-host-access/index.html#when-you-still-need-help",
+    "href": "posts/mongodb-host-access/index.html#when-you-still-need-help",
+    "title": "MongoDB Host Access from Jupyter",
+    "section": "When You Still Need Help",
+    "text": "When You Still Need Help\nIf you have checked the host value and still cannot connect, reach out to the support team or attend an Office Hours session. Include the exact error message and the connection code you are using, but do not share private credentials."
+  }
+]

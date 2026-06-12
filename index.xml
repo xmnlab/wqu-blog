@@ -1,0 +1,758 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss  xmlns:atom="http://www.w3.org/2005/Atom" 
+      xmlns:media="http://search.yahoo.com/mrss/" 
+      xmlns:content="http://purl.org/rss/1.0/modules/content/" 
+      xmlns:dc="http://purl.org/dc/elements/1.1/" 
+      version="2.0">
+<channel>
+<title>WQU Blog</title>
+<link>https://example.com/</link>
+<atom:link href="https://example.com/index.xml" rel="self" type="application/rss+xml"/>
+<description>Student-focused notes, FAQs, and extra explanations for WQU course content.</description>
+<generator>quarto-1.9.38</generator>
+<lastBuildDate>Thu, 11 Jun 2026 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>Mocking in Python</title>
+  <dc:creator>Ivan Ogasawara</dc:creator>
+  <link>https://example.com/posts/mocking-python/</link>
+  <description><![CDATA[ 
+
+
+
+
+<p>A mock is a controlled replacement for something your code normally uses.</p>
+<p>In Python, we often use mocks in tests. Instead of letting the code talk to a real database, call a real web API, send a real email, or read a real file, we replace that dependency with a small object or function that behaves in a predictable way.</p>
+<p>Mocks are useful because they let us test one piece of code at a time. The goal is not to test the internet, a third-party API, or a database server. The goal is to check whether our own function behaves correctly when it receives a certain response.</p>
+<section id="when-to-use-a-mock" class="level2">
+<h2 class="anchored" data-anchor-id="when-to-use-a-mock">When to Use a Mock</h2>
+<p>Use a mock when the real dependency is:</p>
+<ul>
+<li>Slow, such as a network request.</li>
+<li>Unstable, such as an external API that may be temporarily unavailable.</li>
+<li>Expensive, such as a paid service.</li>
+<li>Dangerous, such as code that sends emails, writes files, or changes production data.</li>
+<li>Hard to reproduce, such as an API error or timeout.</li>
+</ul>
+<p>Mocks are especially helpful when a test should always produce the same result. If a test depends on a live website, it may pass today and fail tomorrow even when your code did not change.</p>
+</section>
+<section id="when-not-to-use-a-mock" class="level2">
+<h2 class="anchored" data-anchor-id="when-not-to-use-a-mock">When Not to Use a Mock</h2>
+<p>Do not mock everything. If a function is simple and does not depend on an external system, it is usually better to test it directly.</p>
+<p>For example, a function that calculates a total price does not need a mock:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> total_price(price, quantity):</span>
+<span id="cb1-2">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> price <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">*</span> quantity</span></code></pre></div></div>
+<p>Mocks are most useful at the boundary between your code and something outside your code.</p>
+</section>
+<section id="example-a-function-that-calls-an-api" class="level2">
+<h2 class="anchored" data-anchor-id="example-a-function-that-calls-an-api">Example: A Function That Calls an API</h2>
+<p>Imagine we have this function. It calls an API with <code>requests.get</code>, reads the JSON response, and returns the user’s name:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> requests</span>
+<span id="cb2-2"></span>
+<span id="cb2-3"></span>
+<span id="cb2-4"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> get_user_name(user_id):</span>
+<span id="cb2-5">    url <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"https://api.example.com/users/</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>user_id<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span></span>
+<span id="cb2-6">    response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> requests.get(url, timeout<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>)</span>
+<span id="cb2-7">    response.raise_for_status()</span>
+<span id="cb2-8">    data <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> response.json()</span>
+<span id="cb2-9">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> data[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"name"</span>]</span></code></pre></div></div>
+<p>Testing this function against the real API would make the test depend on the network. The API might be down, the user might not exist anymore, or the response might change.</p>
+<p>Instead, we can replace <code>requests.get</code> with our own function during the test.</p>
+</section>
+<section id="creating-a-mock-response" class="level2">
+<h2 class="anchored" data-anchor-id="creating-a-mock-response">Creating a Mock Response</h2>
+<p>The real <code>requests.get</code> returns a response object. Our function only needs two methods from that object:</p>
+<ul>
+<li><code>raise_for_status()</code></li>
+<li><code>json()</code></li>
+</ul>
+<p>So our mock response only needs to implement those two methods:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">class</span> MockResponse:</span>
+<span id="cb3-2">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">__init__</span>(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>, json_data, status_code<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">200</span>):</span>
+<span id="cb3-3">        <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.json_data <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> json_data</span>
+<span id="cb3-4">        <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.status_code <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> status_code</span>
+<span id="cb3-5"></span>
+<span id="cb3-6">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> json(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>):</span>
+<span id="cb3-7">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.json_data</span>
+<span id="cb3-8"></span>
+<span id="cb3-9">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> raise_for_status(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>):</span>
+<span id="cb3-10">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.status_code <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">400</span>:</span>
+<span id="cb3-11">            <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">raise</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Exception</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"HTTP error: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>status_code<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span></code></pre></div></div>
+<p>Now we can create a mock version of <code>requests.get</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> mock_requests_get(url, timeout<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>):</span>
+<span id="cb4-2">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> MockResponse({<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"id"</span>: <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"name"</span>: <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Ada Lovelace"</span>})</span></code></pre></div></div>
+<p>This function accepts <code>url</code> and <code>timeout</code> because the original code calls <code>requests.get(url, timeout=5)</code>. A mock should accept the arguments that the real function receives.</p>
+</section>
+<section id="activating-and-deactivating-the-mock" class="level2">
+<h2 class="anchored" data-anchor-id="activating-and-deactivating-the-mock">Activating and Deactivating the Mock</h2>
+<p>One simple way to activate a mock is to temporarily replace <code>requests.get</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> requests</span>
+<span id="cb5-2"></span>
+<span id="cb5-3"></span>
+<span id="cb5-4">original_requests_get <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> requests.get</span>
+<span id="cb5-5"></span>
+<span id="cb5-6"></span>
+<span id="cb5-7"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> activate_requests_get_mock():</span>
+<span id="cb5-8">    requests.get <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> mock_requests_get</span>
+<span id="cb5-9"></span>
+<span id="cb5-10"></span>
+<span id="cb5-11"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> deactivate_requests_get_mock():</span>
+<span id="cb5-12">    requests.get <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> original_requests_get</span></code></pre></div></div>
+<p>After <code>activate_requests_get_mock()</code> runs, any code that calls <code>requests.get</code> will call <code>mock_requests_get</code> instead.</p>
+<p>After <code>deactivate_requests_get_mock()</code> runs, <code>requests.get</code> is restored to its original behavior.</p>
+</section>
+<section id="using-the-mock-in-a-test" class="level2">
+<h2 class="anchored" data-anchor-id="using-the-mock-in-a-test">Using the Mock in a Test</h2>
+<p>Here is the full example:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> requests</span>
+<span id="cb6-2"></span>
+<span id="cb6-3"></span>
+<span id="cb6-4"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> get_user_name(user_id):</span>
+<span id="cb6-5">    url <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"https://api.example.com/users/</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span>user_id<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span></span>
+<span id="cb6-6">    response <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> requests.get(url, timeout<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span>)</span>
+<span id="cb6-7">    response.raise_for_status()</span>
+<span id="cb6-8">    data <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> response.json()</span>
+<span id="cb6-9">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> data[<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"name"</span>]</span>
+<span id="cb6-10"></span>
+<span id="cb6-11"></span>
+<span id="cb6-12"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">class</span> MockResponse:</span>
+<span id="cb6-13">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">__init__</span>(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>, json_data, status_code<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">200</span>):</span>
+<span id="cb6-14">        <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.json_data <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> json_data</span>
+<span id="cb6-15">        <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.status_code <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> status_code</span>
+<span id="cb6-16"></span>
+<span id="cb6-17">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> json(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>):</span>
+<span id="cb6-18">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.json_data</span>
+<span id="cb6-19"></span>
+<span id="cb6-20">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> raise_for_status(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>):</span>
+<span id="cb6-21">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">if</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>.status_code <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">&gt;=</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">400</span>:</span>
+<span id="cb6-22">            <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">raise</span> <span class="pp" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">Exception</span>(<span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">f"HTTP error: </span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">{</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span><span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">.</span>status_code<span class="sc" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">}</span><span class="ss" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"</span>)</span>
+<span id="cb6-23"></span>
+<span id="cb6-24"></span>
+<span id="cb6-25"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> mock_requests_get(url, timeout<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>):</span>
+<span id="cb6-26">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> MockResponse({<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"id"</span>: <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"name"</span>: <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Ada Lovelace"</span>})</span>
+<span id="cb6-27"></span>
+<span id="cb6-28"></span>
+<span id="cb6-29">original_requests_get <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> requests.get</span>
+<span id="cb6-30"></span>
+<span id="cb6-31"></span>
+<span id="cb6-32"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> activate_requests_get_mock():</span>
+<span id="cb6-33">    requests.get <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> mock_requests_get</span>
+<span id="cb6-34"></span>
+<span id="cb6-35"></span>
+<span id="cb6-36"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> deactivate_requests_get_mock():</span>
+<span id="cb6-37">    requests.get <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> original_requests_get</span>
+<span id="cb6-38"></span>
+<span id="cb6-39"></span>
+<span id="cb6-40"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> test_get_user_name():</span>
+<span id="cb6-41">    activate_requests_get_mock()</span>
+<span id="cb6-42"></span>
+<span id="cb6-43">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">try</span>:</span>
+<span id="cb6-44">        result <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> get_user_name(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span>
+<span id="cb6-45">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">assert</span> result <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Ada Lovelace"</span></span>
+<span id="cb6-46">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">finally</span>:</span>
+<span id="cb6-47">        deactivate_requests_get_mock()</span></code></pre></div></div>
+<p>The <code>try</code> and <code>finally</code> block is important. It makes sure the mock is deactivated even if the test fails.</p>
+<p>Without <code>finally</code>, a failed test could leave <code>requests.get</code> mocked. That can cause confusing failures in other tests.</p>
+</section>
+<section id="checking-the-request" class="level2">
+<h2 class="anchored" data-anchor-id="checking-the-request">Checking the Request</h2>
+<p>Sometimes we also want to check whether our function called the correct URL. We can store the URL inside a list:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1">calls <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> []</span>
+<span id="cb7-2"></span>
+<span id="cb7-3"></span>
+<span id="cb7-4"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> mock_requests_get(url, timeout<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">None</span>):</span>
+<span id="cb7-5">    calls.append({<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"url"</span>: url, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"timeout"</span>: timeout})</span>
+<span id="cb7-6">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> MockResponse({<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"id"</span>: <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"name"</span>: <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Ada Lovelace"</span>})</span></code></pre></div></div>
+<p>Then the test can check both the result and the request:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> test_get_user_name():</span>
+<span id="cb8-2">    activate_requests_get_mock()</span>
+<span id="cb8-3"></span>
+<span id="cb8-4">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">try</span>:</span>
+<span id="cb8-5">        result <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> get_user_name(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span>
+<span id="cb8-6"></span>
+<span id="cb8-7">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">assert</span> result <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Ada Lovelace"</span></span>
+<span id="cb8-8">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">assert</span> calls[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"url"</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"https://api.example.com/users/1"</span></span>
+<span id="cb8-9">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">assert</span> calls[<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">0</span>][<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"timeout"</span>] <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">5</span></span>
+<span id="cb8-10">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">finally</span>:</span>
+<span id="cb8-11">        deactivate_requests_get_mock()</span></code></pre></div></div>
+<p>This is one of the main benefits of mocks: we can test what our code returns and how it interacts with its dependencies.</p>
+</section>
+<section id="a-safer-pattern" class="level2">
+<h2 class="anchored" data-anchor-id="a-safer-pattern">A Safer Pattern</h2>
+<p>Manually replacing <code>requests.get</code> is useful for learning how mocks work. In larger projects, Python’s <code>unittest.mock</code> module is usually safer because it automatically restores the original function.</p>
+<p>The same test can be written like this:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> unittest.mock <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> patch</span>
+<span id="cb9-2"></span>
+<span id="cb9-3"></span>
+<span id="cb9-4"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> test_get_user_name():</span>
+<span id="cb9-5">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">with</span> patch(<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"requests.get"</span>, mock_requests_get):</span>
+<span id="cb9-6">        result <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> get_user_name(<span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">1</span>)</span>
+<span id="cb9-7"></span>
+<span id="cb9-8">    <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">assert</span> result <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">==</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"Ada Lovelace"</span></span></code></pre></div></div>
+<p>The <code>with</code> block activates the mock. When the block ends, Python deactivates the mock automatically.</p>
+</section>
+<section id="key-idea" class="level2">
+<h2 class="anchored" data-anchor-id="key-idea">Key Idea</h2>
+<p>A mock is a replacement that gives your test control.</p>
+<p>For <code>requests.get</code>, a mock lets us test code that depends on an HTTP response without making a real HTTP request. The test becomes faster, more stable, and easier to understand.</p>
+
+
+</section>
+
+ ]]></description>
+  <category>student-support</category>
+  <category>faq</category>
+  <category>python</category>
+  <category>testing</category>
+  <guid>https://example.com/posts/mocking-python/</guid>
+  <pubDate>Thu, 11 Jun 2026 00:00:00 GMT</pubDate>
+  <media:content url="https://example.com/assets/wqu-blog-cover.png" medium="image" type="image/png" height="81" width="144"/>
+</item>
+<item>
+  <title>Welcome to WQU Insights</title>
+  <dc:creator>WQU </dc:creator>
+  <link>https://example.com/posts/welcome/</link>
+  <description><![CDATA[ 
+
+
+
+
+<p>This blog is a place for short, practical notes that help WQU students move through course content with more confidence.</p>
+<p>The goal is to collect the patterns that come up often: concepts that need another explanation, common errors in assignments, frequent questions from learners, and points where students tend to get blocked.</p>
+<p>Future posts can cover:</p>
+<ul>
+<li>Clarifications for difficult course topics.</li>
+<li>Common mistakes and how to reason through them.</li>
+<li>Frequently asked questions from students.</li>
+<li>Extra examples that connect theory to implementation.</li>
+<li>Debugging notes for notebooks, code, data, and tooling.</li>
+<li>Study guidance for assignments, projects, and assessments.</li>
+</ul>
+<p>Each post should be focused, concrete, and written to help students understand the next step rather than simply giving them an answer.</p>
+
+
+
+ ]]></description>
+  <category>student-support</category>
+  <category>faq</category>
+  <guid>https://example.com/posts/welcome/</guid>
+  <pubDate>Tue, 02 Jun 2026 00:00:00 GMT</pubDate>
+  <media:content url="https://example.com/assets/wqu-blog-cover.png" medium="image" type="image/png" height="81" width="144"/>
+</item>
+<item>
+  <title>MongoDB Host Access from Jupyter</title>
+  <dc:creator>Ivan Ogasawara</dc:creator>
+  <link>https://example.com/posts/mongodb-host-access/</link>
+  <description><![CDATA[ 
+
+
+
+
+<p>Some students have had trouble connecting to their MongoDB instance from a notebook after moving to the current platform. The most common reason is that the new platform uses a different network configuration than the previous one.</p>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Short Version
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Do not connect to <code>localhost</code>. Use the MongoDB host address provided by the platform.</p>
+</div>
+</div>
+<section id="find-the-mongodb-host" class="level2">
+<h2 class="anchored" data-anchor-id="find-the-mongodb-host">Find the MongoDB Host</h2>
+<p>In the platform, click the <strong>Jupyter</strong> button.</p>
+<p><img src="https://example.com/posts/mongodb-host-access/images/wqu-jupyter-menu.png" class="img-fluid" alt="The Jupyter button in the WQU platform interface."></p>
+<p>This opens a pop-up with the Jupyter and MongoDB connection details. Copy the MongoDB IP address shown there.</p>
+<p>In your notebook, store that address in a variable. For example, an IP address usually looks like four numbers separated by dots:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1">host <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"192.168.1.25"</span></span></code></pre></div></div>
+<p>Use the actual MongoDB IP address from your platform pop-up, not the example above. If you want more background on what IP addresses are, see the <a href="https://en.wikipedia.org/wiki/IP_address">Wikipedia page about IP addresses</a>.</p>
+<p>Then use the <code>host</code> variable when you create the MongoDB client:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> pymongo <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> MongoClient</span>
+<span id="cb2-2"></span>
+<span id="cb2-3">client <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> MongoClient(host<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>host, port<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">27017</span>)</span></code></pre></div></div>
+<p>Using a variable makes the notebook easier to update. If the IP address changes later, you only need to update the <code>host</code> value in one place.</p>
+</section>
+<section id="common-error-connecting-to-localhost" class="level2">
+<h2 class="anchored" data-anchor-id="common-error-connecting-to-localhost">Common Error: Connecting to Localhost</h2>
+<p>If you see an error like this, your code is trying to connect to <code>localhost</code>:</p>
+<pre class="text"><code>ServerSelectionTimeoutError: localhost:27017: [Errno 111] Connection refused</code></pre>
+<p>The important part is <code>localhost:27017</code>. That means the notebook is looking for MongoDB on the notebook machine itself, not on the MongoDB host provided by the platform.</p>
+<p>This usually happens when the code still looks like this:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1">client <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> MongoClient(host<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"localhost"</span>, port<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">27017</span>)</span></code></pre></div></div>
+<p>Change it to:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1">client <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> MongoClient(host<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>host, port<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">27017</span>)</span></code></pre></div></div>
+</section>
+<section id="why-hosthost-is-correct" class="level2">
+<h2 class="anchored" data-anchor-id="why-hosthost-is-correct">Why <code>host=host</code> Is Correct</h2>
+<p>The expression <code>host=host</code> can look confusing at first because the same word appears twice.</p>
+<p>In this line:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1">client <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> MongoClient(host<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>host, port<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">27017</span>)</span></code></pre></div></div>
+<p>The first <code>host</code> is the parameter name expected by <code>MongoClient</code>.</p>
+<p>The second <code>host</code> is the variable you created earlier:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1">host <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"your-mongodb-ip-address"</span></span></code></pre></div></div>
+<p>So <code>host=host</code> means: pass the value stored in the <code>host</code> variable to the <code>host</code> parameter.</p>
+</section>
+<section id="another-common-mistake-using-host-as-text" class="level2">
+<h2 class="anchored" data-anchor-id="another-common-mistake-using-host-as-text">Another Common Mistake: Using <code>"host"</code> as Text</h2>
+<p>If your error message mentions something like <code>host:27017</code>, check whether your code uses quotation marks around <code>host</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1">client <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> MongoClient(host<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"host"</span>, port<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">27017</span>)</span></code></pre></div></div>
+<p>That is different from <code>host=host</code>.</p>
+<p><code>"host"</code> is just the literal text <code>host</code>. Python will not replace it with your variable value.</p>
+<p>Use this instead:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9" style="background: #f1f3f5;"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1">client <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> MongoClient(host<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>host, port<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">27017</span>)</span></code></pre></div></div>
+</section>
+<section id="how-to-read-the-error-message" class="level2">
+<h2 class="anchored" data-anchor-id="how-to-read-the-error-message">How to Read the Error Message</h2>
+<p>Error messages usually include useful clues. For MongoDB connection issues, look for the host and port in the message:</p>
+<ul>
+<li><code>localhost:27017</code> usually means the code is still using <code>localhost</code>.</li>
+<li><code>host:27017</code> usually means the code is using the string <code>"host"</code> instead of the variable <code>host</code>.</li>
+<li>A platform IP followed by <code>:27017</code> means the code is at least trying the intended host, so the next thing to check is whether the copied IP address is correct.</li>
+</ul>
+<p>The error type is also useful. <code>ServerSelectionTimeoutError</code> means the client could not reach a MongoDB server before the timeout. In this case, the cause is often the wrong host address.</p>
+</section>
+<section id="when-you-still-need-help" class="level2">
+<h2 class="anchored" data-anchor-id="when-you-still-need-help">When You Still Need Help</h2>
+<p>If you have checked the host value and still cannot connect, reach out to the support team or attend an Office Hours session. Include the exact error message and the connection code you are using, but do not share private credentials.</p>
+
+
+</section>
+
+ ]]></description>
+  <category>student-support</category>
+  <category>faq</category>
+  <category>mongodb</category>
+  <guid>https://example.com/posts/mongodb-host-access/</guid>
+  <pubDate>Tue, 02 Jun 2026 00:00:00 GMT</pubDate>
+  <media:content url="https://example.com/posts/mongodb-host-access/images/wqu-jupyter-menu.png" medium="image" type="image/png" height="106" width="144"/>
+</item>
+</channel>
+</rss>
