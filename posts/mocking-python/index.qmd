@@ -162,7 +162,6 @@ def deactivate_requests_get_mock():
 
 
 def test_get_user_name():
-    calls.clear()
     activate_requests_get_mock()
 
     try:
