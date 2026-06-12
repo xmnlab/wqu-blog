@@ -17,17 +17,29 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Quarto
-        uses: quarto-dev/quarto-actions/setup@v2
+      - name: Set up Conda environment
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          environment-file: conda.yaml
+          activate-environment: wqu-blog
+          auto-activate-base: false
+
+      - name: Verify build tools
+        run: |
+          quarto --version
+          makim --version
 
       - name: Build site
         run: |
-          mkdir -p .quarto-tmp .quarto-cache
-          TMPDIR="$PWD/.quarto-tmp" XDG_CACHE_HOME="$PWD/.quarto-cache" quarto render
+          makim pages.build
           touch _site/.nojekyll
 
       - name: Configure Pages
