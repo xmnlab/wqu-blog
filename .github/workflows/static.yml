@@ -1,4 +1,4 @@
-name: Deploy Quarto site to Pages
+name: Publish Quarto site
 
 on:
   push:
@@ -6,16 +6,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: "pages"
+  group: "gh-pages"
   cancel-in-progress: false
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -42,55 +40,34 @@ jobs:
           makim pages.build
           touch _site/.nojekyll
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: _site
-
-  deploy:
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Check GitHub Pages setup
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Publish to gh-pages
+        if: github.ref == 'refs/heads/main'
         run: |
-          response_file="$(mktemp)"
-          status="$(
-            curl -sS \
-              -o "$response_file" \
-              -w "%{http_code}" \
-              -H "Authorization: Bearer ${GH_TOKEN}" \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/pages"
-          )"
+          set -euo pipefail
 
-          if [ "$status" = "404" ]; then
-            {
-              echo "### GitHub Pages is not enabled"
-              echo
-              echo "Enable Pages before deploying this site:"
-              echo
-              echo "1. Open https://github.com/${GITHUB_REPOSITORY}/settings/pages"
-              echo "2. Under Build and deployment, set Source to GitHub Actions."
-              echo "3. Rerun this workflow."
-            } >> "$GITHUB_STEP_SUMMARY"
+          deploy_dir="${RUNNER_TEMP}/gh-pages"
+          rm -rf "$deploy_dir"
+          mkdir -p "$deploy_dir"
+          cp -a _site/. "$deploy_dir/"
 
-            echo "::error title=GitHub Pages is not enabled::Open https://github.com/${GITHUB_REPOSITORY}/settings/pages and set Source to GitHub Actions, then rerun this workflow."
-            exit 1
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin gh-pages > /dev/null 2>&1; then
+            git fetch origin gh-pages
+            git checkout -B gh-pages origin/gh-pages
+          else
+            git checkout --orphan gh-pages
           fi
 
-          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
-            echo "::error title=Could not read GitHub Pages settings::GitHub API returned HTTP ${status}."
-            cat "$response_file"
-            exit 1
-          fi
+          git rm -r --ignore-unmatch .
+          cp -a "$deploy_dir"/. .
+          touch .nojekyll
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          git add --all
+          if git diff --cached --quiet; then
+            echo "No site changes to publish."
+          else
+            git commit -m "Deploy site"
+            git push origin gh-pages
+          fi
